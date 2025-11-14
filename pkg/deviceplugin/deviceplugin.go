@@ -16,10 +16,6 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-const (
-	ServerSock = pluginapi.DevicePluginPath + "soft-roce.sock"
-)
-
 type SoftRoceDevicePlugin struct {
 	pluginapi.UnimplementedDevicePluginServer
 	resourceName string
@@ -67,7 +63,7 @@ func register(endpoint, resourceName string) {
 	client := pluginapi.NewRegistrationClient(conn)
 	req := &pluginapi.RegisterRequest{
 		Version:      pluginapi.Version,
-		Endpoint:     path.Base(ServerSock),
+		Endpoint:     path.Base(resourceName),
 		ResourceName: resourceName,
 	}
 
@@ -86,9 +82,9 @@ func unixDial(endpoint string, timeout time.Duration) (*grpc.ClientConn, error) 
 
 func (m *SoftRoceDevicePlugin) Start() {
 	utils.Must(os.MkdirAll(pluginapi.DevicePluginPath, 0755))
-	_ = unix.Unlink(ServerSock)
+	_ = unix.Unlink(sockPath(m.resourceName))
 
-	sock, err := net.Listen("unix", ServerSock)
+	sock, err := net.Listen("unix", sockPath(m.resourceName))
 	utils.Must(err)
 
 	server := grpc.NewServer([]grpc.ServerOption{}...)
@@ -96,7 +92,7 @@ func (m *SoftRoceDevicePlugin) Start() {
 
 	go func() { utils.Must(server.Serve(sock)) }()
 	// Wait for server to start by launching a blocking connection
-	conn, err := unixDial(ServerSock, 5*time.Second)
+	conn, err := unixDial(sockPath(m.resourceName), 5*time.Second)
 	utils.Must(err)
 	utils.Must(conn.Close())
 	log.Info("test sock ok")
@@ -106,3 +102,8 @@ func (m *SoftRoceDevicePlugin) Start() {
 }
 
 func (m *SoftRoceDevicePlugin) Stop() {}
+
+func sockPath(name string) string {
+	name = path.Base(name)
+	return path.Join(pluginapi.DevicePluginPath, name)
+}
