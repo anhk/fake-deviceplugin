@@ -4,6 +4,7 @@ import (
 	"context"
 	"fake-deviceplugin/pkg/log"
 	"fake-deviceplugin/pkg/utils"
+	"fmt"
 	"net"
 	"os"
 	"path"
@@ -16,16 +17,17 @@ import (
 )
 
 const (
-	ResourceName = "rdma/soft-roce"
-	ServerSock   = pluginapi.DevicePluginPath + "soft-roce.sock"
+	ServerSock = pluginapi.DevicePluginPath + "soft-roce.sock"
 )
 
 type SoftRoceDevicePlugin struct {
 	pluginapi.UnimplementedDevicePluginServer
+	resourceName string
+	count        int
 }
 
-func NewSoftRoceDevicePlugin() *SoftRoceDevicePlugin {
-	return &SoftRoceDevicePlugin{}
+func NewSoftRoceDevicePlugin(resource string, count int) *SoftRoceDevicePlugin {
+	return &SoftRoceDevicePlugin{resourceName: resource, count: count}
 }
 
 func (m *SoftRoceDevicePlugin) GetDevicePluginOptions(_ context.Context, _ *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
@@ -33,16 +35,16 @@ func (m *SoftRoceDevicePlugin) GetDevicePluginOptions(_ context.Context, _ *plug
 }
 
 func (m *SoftRoceDevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi.DevicePlugin_ListAndWatchServer) error {
-	utils.Must(server.Send(&pluginapi.ListAndWatchResponse{
-		Devices: []*pluginapi.Device{{
-			ID:       "ib0",
+	devices := make([]*pluginapi.Device, 0, m.count)
+	for i := 0; i < m.count; i++ {
+		devices = append(devices, &pluginapi.Device{
+			ID:       fmt.Sprintf("%s-%d", m.resourceName, i),
 			Health:   pluginapi.Healthy,
-			Topology: &pluginapi.TopologyInfo{Nodes: []*pluginapi.NUMANode{{ID: 999999}}},
-		}},
-	}))
-
-	select { // TODO: ctx->Done()
+			Topology: &pluginapi.TopologyInfo{Nodes: []*pluginapi.NUMANode{{ID: int64(i)}}},
+		})
 	}
+	utils.Must(server.Send(&pluginapi.ListAndWatchResponse{Devices: devices}))
+	select {}
 }
 
 func (m *SoftRoceDevicePlugin) GetPreferredAllocation(_ context.Context, _ *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
@@ -50,15 +52,7 @@ func (m *SoftRoceDevicePlugin) GetPreferredAllocation(_ context.Context, _ *plug
 }
 
 func (m *SoftRoceDevicePlugin) Allocate(ctx context.Context, request *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
-	return &pluginapi.AllocateResponse{
-		ContainerResponses: []*pluginapi.ContainerAllocateResponse{{
-			Devices: []*pluginapi.DeviceSpec{{
-				ContainerPath: "/dev/infiniband/uverbs0",
-				HostPath:      "/dev/infiniband/uverbs0",
-				Permissions:   "rw",
-			}},
-		}},
-	}, nil
+	return &pluginapi.AllocateResponse{ContainerResponses: []*pluginapi.ContainerAllocateResponse{{}}}, nil
 }
 
 func (m *SoftRoceDevicePlugin) PreStartContainer(ctx context.Context, request *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
@@ -107,9 +101,8 @@ func (m *SoftRoceDevicePlugin) Start() {
 	utils.Must(conn.Close())
 	log.Info("test sock ok")
 
-	register(pluginapi.KubeletSocket, ResourceName)
+	register(pluginapi.KubeletSocket, m.resourceName)
 	log.Info("register device plugin ok")
 }
 
-func (m *SoftRoceDevicePlugin) Stop() {
-}
+func (m *SoftRoceDevicePlugin) Stop() {}
