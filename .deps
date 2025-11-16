@@ -1,5 +1,6 @@
 fake-deviceplugin: \
 ./pkg/log/log.go \
+./pkg/k8s/k8s.go \
 ./pkg/utils/must.go \
 ./pkg/utils/json.go \
 ./main.go \

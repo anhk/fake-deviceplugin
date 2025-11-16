@@ -1,7 +1,10 @@
 package k8s
 
 import (
+	"fake-deviceplugin/pkg/log"
 	"fake-deviceplugin/pkg/utils"
+	"os"
+	"path/filepath"
 	"sync"
 
 	clientset "k8s.io/client-go/kubernetes"
@@ -14,8 +17,16 @@ var kubeClient *clientset.Clientset
 var once sync.Once
 
 func GetKubeConfig() *rest.Config {
-	// Prefer kubeconfig file
+	// Determine kubeconfig path: explicit var -> KUBECONFIG env -> $HOME/.kube/config
+	if kubeconfig == "" {
+		if env := os.Getenv("KUBECONFIG"); env != "" {
+			kubeconfig = env
+		} else if home, err := os.UserHomeDir(); err == nil {
+			kubeconfig = filepath.Join(home, ".kube", "config")
+		}
+	}
 
+	// Prefer kubeconfig file if available
 	if cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig); err == nil {
 		return cfg
 	}
@@ -32,6 +43,7 @@ func GetKubeConfig() *rest.Config {
 func GetKubeClient() *clientset.Clientset {
 	once.Do(func() {
 		kubeClient = clientset.NewForConfigOrDie(GetKubeConfig())
+		log.Info("Get Kubernetes Client OK")
 	})
 	return kubeClient
 }

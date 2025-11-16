@@ -27,6 +27,9 @@ func (sched *Schedueler) Start() error {
 	r.POST("/score", sched.Score)
 	r.POST("/bind", sched.Bind)
 
+	// Test Kubernetes APIServer
+	_ = k8s.GetKubeClient()
+
 	return r.Run(":8888")
 }
 
