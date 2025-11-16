@@ -20,7 +20,7 @@ func NewScheduler() *Schedueler {
 	return &Schedueler{}
 }
 
-func (sched *Schedueler) Start() error {
+func (sched *Schedueler) Start() {
 	r := gin.Default()
 
 	r.POST("/filter", sched.Filter)
@@ -29,12 +29,7 @@ func (sched *Schedueler) Start() error {
 
 	// Test Kubernetes APIServer
 	_ = k8s.GetKubeClient(utils.GetInitContext())
-
-	go func() {
-		r.Run(":8888")
-	}()
-
-	return nil
+	go func() { utils.PanicIfError(r.Run(":8888")) }()
 }
 
 func (sched *Schedueler) Filter(c *gin.Context) {

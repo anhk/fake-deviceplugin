@@ -38,7 +38,7 @@ func main() {
 	dp.Start()
 
 	sched := scheduler.NewScheduler()
-	utils.PanicIfError(sched.Start())
+	sched.Start()
 
 	WaitKubeletRestart()
 }
