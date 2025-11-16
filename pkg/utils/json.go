@@ -4,6 +4,6 @@ import "encoding/json"
 
 func JsonString(v any) string {
 	data, err := json.Marshal(v)
-	Must(err)
+	PanicIfError(err)
 	return string(data)
 }

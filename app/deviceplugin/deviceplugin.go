@@ -41,7 +41,7 @@ func (m *DevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi.DeviceP
 			Topology: &pluginapi.TopologyInfo{Nodes: []*pluginapi.NUMANode{{ID: int64(i)}}},
 		})
 	}
-	utils.Must(server.Send(&pluginapi.ListAndWatchResponse{Devices: devices}))
+	utils.PanicIfError(server.Send(&pluginapi.ListAndWatchResponse{Devices: devices}))
 	select {}
 }
 
@@ -62,7 +62,7 @@ func (m *DevicePlugin) PreStartContainer(ctx context.Context, request *pluginapi
 
 func register(endpoint, resourceName string) {
 	conn, err := unixDial(endpoint, 5*time.Second)
-	utils.Must(err)
+	utils.PanicIfError(err)
 	defer conn.Close()
 
 	client := pluginapi.NewRegistrationClient(conn)
@@ -74,7 +74,7 @@ func register(endpoint, resourceName string) {
 	log.Debugf("register req: %s", utils.JsonString(req))
 
 	_, err = client.Register(context.Background(), req)
-	utils.Must(err)
+	utils.PanicIfError(err)
 }
 
 func unixDial(endpoint string, timeout time.Duration) (*grpc.ClientConn, error) {
@@ -97,20 +97,20 @@ func unixDial(endpoint string, timeout time.Duration) (*grpc.ClientConn, error) 
 // }
 
 func (m *DevicePlugin) Start() {
-	utils.Must(os.MkdirAll(pluginapi.DevicePluginPath, 0755))
+	utils.PanicIfError(os.MkdirAll(pluginapi.DevicePluginPath, 0755))
 	_ = unix.Unlink(sockPath(m.resourceName))
 
 	sock, err := net.Listen("unix", sockPath(m.resourceName))
-	utils.Must(err)
+	utils.PanicIfError(err)
 
 	server := grpc.NewServer([]grpc.ServerOption{}...)
 	pluginapi.RegisterDevicePluginServer(server, m)
 
-	go func() { utils.Must(server.Serve(sock)) }()
+	go func() { utils.PanicIfError(server.Serve(sock)) }()
 	// Wait for server to start by launching a blocking connection
 	conn, err := unixDial(sockPath(m.resourceName), 5*time.Second)
-	utils.Must(err)
-	utils.Must(conn.Close())
+	utils.PanicIfError(err)
+	utils.PanicIfError(conn.Close())
 	log.Infof("test sock [%s] ok", sockPath(m.resourceName))
 
 	register(pluginapi.KubeletSocket, m.resourceName)

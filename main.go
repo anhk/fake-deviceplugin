@@ -13,10 +13,10 @@ import (
 
 func WaitKubeletRestart() {
 	watcher, err := fsnotify.NewWatcher()
-	utils.Must(err)
+	utils.PanicIfError(err)
 	defer watcher.Close()
 
-	utils.Must(watcher.Add(pluginapi.KubeletSocket))
+	utils.PanicIfError(watcher.Add(pluginapi.KubeletSocket))
 	for {
 		select {
 		case event := <-watcher.Events:
@@ -35,7 +35,7 @@ func main() {
 	dp.Start()
 
 	sched := scheduler.NewScheduler()
-	utils.Must(sched.Start())
+	utils.PanicIfError(sched.Start())
 
 	WaitKubeletRestart()
 }

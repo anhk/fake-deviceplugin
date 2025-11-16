@@ -1,12 +1,15 @@
 package scheduler
 
 import (
+	"context"
+	"fake-deviceplugin/pkg/k8s"
 	"fake-deviceplugin/pkg/log"
 	"fake-deviceplugin/pkg/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	//  "k8s.io/kubernetes/pkg/scheduler/apis/extender/v1beta1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schedulerapi "k8s.io/kube-scheduler/extender/v1"
 )
 
@@ -70,6 +73,14 @@ func (sched *Schedueler) Bind(c *gin.Context) {
 		return
 	}
 	log.Debug("Scheduler Bind called, request: %s", utils.JsonString(request))
+
+	binding := &v1.Binding{
+		ObjectMeta: metav1.ObjectMeta{Name: request.PodName, UID: request.PodUID},
+		Target:     v1.ObjectReference{Kind: "Node", Name: request.Node},
+	}
+
+	err := k8s.GetKubeClient().CoreV1().Pods(request.PodNamespace).Bind(context.Background(), binding, metav1.CreateOptions{})
+	utils.PanicIfError(err)
 
 	var result schedulerapi.ExtenderBindingResult
 	c.JSON(http.StatusOK, &result)
