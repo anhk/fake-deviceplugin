@@ -1,6 +1,8 @@
 fake-deviceplugin: \
 ./pkg/log/log.go \
-./pkg/deviceplugin/deviceplugin.go \
 ./pkg/utils/must.go \
+./pkg/utils/json.go \
 ./main.go \
+./app/deviceplugin/deviceplugin.go \
+./app/scheduler/scheduler.go \
 

@@ -1,7 +1,8 @@
 package main
 
 import (
-	dp "fake-deviceplugin/pkg/deviceplugin"
+	dp "fake-deviceplugin/app/deviceplugin"
+	"fake-deviceplugin/app/scheduler"
 	"fake-deviceplugin/pkg/log"
 	"fake-deviceplugin/pkg/utils"
 	"os"
@@ -32,6 +33,9 @@ func WaitKubeletRestart() {
 func main() {
 	dp := dp.NewDevicePlugin("xxfe.com/fake-device", 4)
 	dp.Start()
+
+	sched := scheduler.NewScheduler()
+	utils.Must(sched.Start())
 
 	WaitKubeletRestart()
 }
