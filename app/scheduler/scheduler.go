@@ -18,7 +18,7 @@ func (sched *Schedueler) Start() error {
 	r.POST("/score", sched.Score)
 	r.POST("/bind", sched.Bind)
 
-	return r.Run()
+	return r.Run(":8888")
 }
 
 func (sched *Schedueler) Filter(c *gin.Context) {
