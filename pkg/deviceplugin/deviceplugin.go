@@ -16,21 +16,23 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-type SoftRoceDevicePlugin struct {
+type DevicePlugin struct {
 	pluginapi.UnimplementedDevicePluginServer
 	resourceName string
 	count        int
 }
 
-func NewSoftRoceDevicePlugin(resource string, count int) *SoftRoceDevicePlugin {
-	return &SoftRoceDevicePlugin{resourceName: resource, count: count}
+func NewDevicePlugin(resource string, count int) *DevicePlugin {
+	return &DevicePlugin{resourceName: resource, count: count}
 }
 
-func (m *SoftRoceDevicePlugin) GetDevicePluginOptions(_ context.Context, _ *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
+func (m *DevicePlugin) GetDevicePluginOptions(_ context.Context, _ *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
+	log.Debug("GetDevicePluginOptions called")
 	return nil, nil
 }
 
-func (m *SoftRoceDevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi.DevicePlugin_ListAndWatchServer) error {
+func (m *DevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi.DevicePlugin_ListAndWatchServer) error {
+	log.Debug("ListAndWatch called")
 	devices := make([]*pluginapi.Device, 0, m.count)
 	for i := 0; i < m.count; i++ {
 		devices = append(devices, &pluginapi.Device{
@@ -43,15 +45,18 @@ func (m *SoftRoceDevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi
 	select {}
 }
 
-func (m *SoftRoceDevicePlugin) GetPreferredAllocation(_ context.Context, _ *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+func (m *DevicePlugin) GetPreferredAllocation(_ context.Context, _ *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+	log.Debug("GetPreferredAllocation called")
 	return nil, nil
 }
 
-func (m *SoftRoceDevicePlugin) Allocate(ctx context.Context, request *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+func (m *DevicePlugin) Allocate(ctx context.Context, request *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+	log.Debugf("Allocate called with request: %s", utils.JsonString(request))
 	return &pluginapi.AllocateResponse{ContainerResponses: []*pluginapi.ContainerAllocateResponse{{}}}, nil
 }
 
-func (m *SoftRoceDevicePlugin) PreStartContainer(ctx context.Context, request *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
+func (m *DevicePlugin) PreStartContainer(ctx context.Context, request *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
+	log.Debugf("PreStartContainer called with request: %s", utils.JsonString(request))
 	return nil, nil
 }
 
@@ -63,24 +68,35 @@ func register(endpoint, resourceName string) {
 	client := pluginapi.NewRegistrationClient(conn)
 	req := &pluginapi.RegisterRequest{
 		Version:      pluginapi.Version,
-		Endpoint:     path.Base(resourceName),
+		Endpoint:     path.Base(sockPath(resourceName)),
 		ResourceName: resourceName,
 	}
+	log.Debugf("register req: %s", utils.JsonString(req))
 
 	_, err = client.Register(context.Background(), req)
 	utils.Must(err)
 }
 
 func unixDial(endpoint string, timeout time.Duration) (*grpc.ClientConn, error) {
-	return grpc.NewClient(endpoint,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	c, err := grpc.DialContext(timeoutCtx, endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(), grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
 			return net.DialTimeout("unix", endpoint, timeout)
-		}),
-	)
+		}))
+	return c, err
 }
 
-func (m *SoftRoceDevicePlugin) Start() {
+// func unixDial(endpoint string, timeout time.Duration) (*grpc.ClientConn, error) {
+// 	return grpc.NewClient(endpoint,
+// 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+// 		grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+// 			return net.DialTimeout("unix", endpoint, timeout)
+// 		}),
+// 	)
+// }
+
+func (m *DevicePlugin) Start() {
 	utils.Must(os.MkdirAll(pluginapi.DevicePluginPath, 0755))
 	_ = unix.Unlink(sockPath(m.resourceName))
 
@@ -95,15 +111,15 @@ func (m *SoftRoceDevicePlugin) Start() {
 	conn, err := unixDial(sockPath(m.resourceName), 5*time.Second)
 	utils.Must(err)
 	utils.Must(conn.Close())
-	log.Info("test sock ok")
+	log.Infof("test sock [%s] ok", sockPath(m.resourceName))
 
 	register(pluginapi.KubeletSocket, m.resourceName)
 	log.Info("register device plugin ok")
 }
 
-func (m *SoftRoceDevicePlugin) Stop() {}
+func (m *DevicePlugin) Stop() {}
 
 func sockPath(name string) string {
 	name = path.Base(name)
-	return path.Join(pluginapi.DevicePluginPath, name)
+	return path.Join(pluginapi.DevicePluginPath, name) + ".sock"
 }

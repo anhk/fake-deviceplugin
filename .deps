@@ -1,0 +1,6 @@
+fake-deviceplugin: \
+./pkg/log/log.go \
+./pkg/deviceplugin/deviceplugin.go \
+./pkg/utils/must.go \
+./main.go \
+
