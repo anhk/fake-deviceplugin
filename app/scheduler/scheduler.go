@@ -28,7 +28,7 @@ func (sched *Schedueler) Start() error {
 	r.POST("/bind", sched.Bind)
 
 	// Test Kubernetes APIServer
-	_ = k8s.GetKubeClient()
+	_ = k8s.GetKubeClient(utils.GetInitContext())
 
 	return r.Run(":8888")
 }
@@ -39,7 +39,9 @@ func (sched *Schedueler) Filter(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	log.Debug("Scheduler Filter called, request: %s", utils.JsonString(request))
+	ctx := utils.NewContext()
+
+	log.Debug(ctx, "Scheduler Filter called, request: %s", utils.JsonString(request))
 
 	var result schedulerapi.ExtenderFilterResult
 	result.Nodes = request.Nodes
@@ -53,6 +55,7 @@ func (sched *Schedueler) Score(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	ctx := utils.NewContext()
 
 	var result schedulerapi.HostPriorityList
 	if request.NodeNames != nil {
@@ -64,7 +67,7 @@ func (sched *Schedueler) Score(c *gin.Context) {
 			result = append(result, schedulerapi.HostPriority{Host: node.Name, Score: 10})
 		}
 	}
-	log.Debug("Scheduler Score called, request: %s, response: %s", utils.JsonString(request), utils.JsonString(result))
+	log.Debug(ctx, "Scheduler Score called, request: %s, response: %s", utils.JsonString(request), utils.JsonString(result))
 
 	c.JSON(http.StatusOK, &result)
 }
@@ -75,14 +78,16 @@ func (sched *Schedueler) Bind(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	log.Debug("Scheduler Bind called, request: %s", utils.JsonString(request))
+
+	ctx := utils.NewContext()
+	log.Debug(ctx, "Scheduler Bind called, request: %s", utils.JsonString(request))
 
 	binding := &v1.Binding{
 		ObjectMeta: metav1.ObjectMeta{Name: request.PodName, UID: request.PodUID},
 		Target:     v1.ObjectReference{Kind: "Node", Name: request.Node},
 	}
 
-	err := k8s.GetKubeClient().CoreV1().Pods(request.PodNamespace).Bind(context.Background(), binding, metav1.CreateOptions{})
+	err := k8s.GetKubeClient(ctx).CoreV1().Pods(request.PodNamespace).Bind(context.Background(), binding, metav1.CreateOptions{})
 	utils.PanicIfError(err)
 
 	var result schedulerapi.ExtenderBindingResult

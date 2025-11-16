@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fake-deviceplugin/pkg/log"
 	"fake-deviceplugin/pkg/utils"
 	"os"
@@ -40,10 +41,10 @@ func GetKubeConfig() *rest.Config {
 	return nil
 }
 
-func GetKubeClient() *clientset.Clientset {
+func GetKubeClient(ctx context.Context) *clientset.Clientset {
 	once.Do(func() {
 		kubeClient = clientset.NewForConfigOrDie(GetKubeConfig())
-		log.Info("Get Kubernetes Client OK")
+		log.Info(ctx, "Get Kubernetes Client OK")
 	})
 	return kubeClient
 }

@@ -12,6 +12,7 @@ import (
 )
 
 func WaitKubeletRestart() {
+	ctx := utils.GetInitContext()
 	watcher, err := fsnotify.NewWatcher()
 	utils.PanicIfError(err)
 	defer watcher.Close()
@@ -21,11 +22,11 @@ func WaitKubeletRestart() {
 		select {
 		case event := <-watcher.Events:
 			if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
-				log.Infof("inotify: %s created, restarting.", pluginapi.KubeletSocket)
+				log.Infof(ctx, "inotify: %s created, restarting.", pluginapi.KubeletSocket)
 				os.Exit(255)
 			}
 		case err := <-watcher.Errors:
-			log.Infof("inotify error: %v", err)
+			log.Infof(ctx, "inotify error: %v", err)
 		}
 	}
 }

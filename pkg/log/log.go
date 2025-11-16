@@ -1,6 +1,8 @@
 package log
 
 import (
+	"context"
+	"fake-deviceplugin/pkg/utils"
 	"fmt"
 	"log"
 	"os"
@@ -41,50 +43,55 @@ func logPrint(prefix string, v ...any) {
 	_ = logger.Output(3, fmt.Sprintln(arr...))
 }
 
-func Debug(v ...any) {
+func traceId(ctx context.Context) string {
+	traceId := utils.GetTraceId(ctx)
+	return fmt.Sprintf("[%s]", traceId)
+}
+
+func Debug(ctx context.Context, v ...any) {
 	if level <= DEBUG {
-		logPrint("[DEBUG]", v...)
+		logPrint("[DEBUG]"+traceId(ctx), v...)
 	}
 }
 
-func Debugf(f string, v ...interface{}) {
+func Debugf(ctx context.Context, f string, v ...interface{}) {
 	if level <= DEBUG {
-		logPrint("[DEBUG]", fmt.Sprintf(f, v...))
+		logPrint("[DEBUG]"+traceId(ctx), fmt.Sprintf(f, v...))
 	}
 }
 
-func Info(v ...any) {
+func Info(ctx context.Context, v ...any) {
 	if level <= DEBUG {
-		logPrint("[INFO]", v...)
+		logPrint("[INFO]"+traceId(ctx), v...)
 	}
 }
 
-func Infof(f string, v ...interface{}) {
+func Infof(ctx context.Context, f string, v ...interface{}) {
 	if level <= DEBUG {
-		logPrint("[INFO]", fmt.Sprintf(f, v...))
+		logPrint("[INFO]"+traceId(ctx), fmt.Sprintf(f, v...))
 	}
 }
 
-func Warn(v ...any) {
+func Warn(ctx context.Context, v ...any) {
 	if level <= DEBUG {
-		logPrint("[WARN]", v...)
+		logPrint("[WARN]"+traceId(ctx), v...)
 	}
 }
 
-func Warnf(f string, v ...interface{}) {
+func Warnf(ctx context.Context, f string, v ...interface{}) {
 	if level <= DEBUG {
-		logPrint("[WARN]", fmt.Sprintf(f, v...))
+		logPrint("[WARN]"+traceId(ctx), fmt.Sprintf(f, v...))
 	}
 }
 
-func Error(v ...any) {
+func Error(ctx context.Context, v ...any) {
 	if level <= DEBUG {
-		logPrint("[ERROR]", v...)
+		logPrint("[ERROR]"+traceId(ctx), v...)
 	}
 }
 
-func Errorf(f string, v ...interface{}) {
+func Errorf(ctx context.Context, f string, v ...interface{}) {
 	if level <= DEBUG {
-		logPrint("[ERROR]", fmt.Sprintf(f, v...))
+		logPrint("[ERROR]"+traceId(ctx), fmt.Sprintf(f, v...))
 	}
 }

@@ -26,13 +26,13 @@ func NewDevicePlugin(resource string, count int) *DevicePlugin {
 	return &DevicePlugin{resourceName: resource, count: count}
 }
 
-func (m *DevicePlugin) GetDevicePluginOptions(_ context.Context, _ *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
-	log.Debug("GetDevicePluginOptions called")
+func (m *DevicePlugin) GetDevicePluginOptions(ctx context.Context, _ *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
+	log.Debug(ctx, "GetDevicePluginOptions called")
 	return nil, nil
 }
 
 func (m *DevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi.DevicePlugin_ListAndWatchServer) error {
-	log.Debug("ListAndWatch called")
+	log.Debug(utils.GetInitContext(), "ListAndWatch called")
 	devices := make([]*pluginapi.Device, 0, m.count)
 	for i := 0; i < m.count; i++ {
 		devices = append(devices, &pluginapi.Device{
@@ -45,22 +45,23 @@ func (m *DevicePlugin) ListAndWatch(_ *pluginapi.Empty, server pluginapi.DeviceP
 	select {}
 }
 
-func (m *DevicePlugin) GetPreferredAllocation(_ context.Context, _ *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
-	log.Debug("GetPreferredAllocation called")
+func (m *DevicePlugin) GetPreferredAllocation(ctx context.Context, _ *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+	log.Debug(ctx, "GetPreferredAllocation called")
 	return nil, nil
 }
 
 func (m *DevicePlugin) Allocate(ctx context.Context, request *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
-	log.Debugf("Allocate called with request: %s", utils.JsonString(request))
+	log.Debugf(ctx, "Allocate called with request: %s", utils.JsonString(request))
 	return &pluginapi.AllocateResponse{ContainerResponses: []*pluginapi.ContainerAllocateResponse{{}}}, nil
 }
 
 func (m *DevicePlugin) PreStartContainer(ctx context.Context, request *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
-	log.Debugf("PreStartContainer called with request: %s", utils.JsonString(request))
+	log.Debugf(ctx, "PreStartContainer called with request: %s", utils.JsonString(request))
 	return nil, nil
 }
 
 func register(endpoint, resourceName string) {
+	ctx := utils.GetInitContext()
 	conn, err := unixDial(endpoint, 5*time.Second)
 	utils.PanicIfError(err)
 	defer conn.Close()
@@ -71,7 +72,7 @@ func register(endpoint, resourceName string) {
 		Endpoint:     path.Base(sockPath(resourceName)),
 		ResourceName: resourceName,
 	}
-	log.Debugf("register req: %s", utils.JsonString(req))
+	log.Debugf(ctx, "register req: %s", utils.JsonString(req))
 
 	_, err = client.Register(context.Background(), req)
 	utils.PanicIfError(err)
@@ -97,6 +98,7 @@ func unixDial(endpoint string, timeout time.Duration) (*grpc.ClientConn, error) 
 // }
 
 func (m *DevicePlugin) Start() {
+	ctx := utils.GetInitContext()
 	utils.PanicIfError(os.MkdirAll(pluginapi.DevicePluginPath, 0755))
 	_ = unix.Unlink(sockPath(m.resourceName))
 
@@ -111,10 +113,10 @@ func (m *DevicePlugin) Start() {
 	conn, err := unixDial(sockPath(m.resourceName), 5*time.Second)
 	utils.PanicIfError(err)
 	utils.PanicIfError(conn.Close())
-	log.Infof("test sock [%s] ok", sockPath(m.resourceName))
+	log.Infof(ctx, "test sock [%s] ok", sockPath(m.resourceName))
 
 	register(pluginapi.KubeletSocket, m.resourceName)
-	log.Info("register device plugin ok")
+	log.Info(ctx, "register device plugin ok")
 }
 
 func (m *DevicePlugin) Stop() {}
