@@ -17,12 +17,14 @@ func WaitKubeletRestart() {
 	utils.PanicIfError(err)
 	defer watcher.Close()
 
+	log.Debug(ctx, "wait for notify kubelet.sock")
+
 	utils.PanicIfError(watcher.Add(pluginapi.KubeletSocket))
 	for {
 		select {
 		case event := <-watcher.Events:
-			if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
-				log.Infof(ctx, "inotify: %s created, restarting.", pluginapi.KubeletSocket)
+			if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Remove == fsnotify.Remove {
+				log.Infof(ctx, "inotify: %s removed, restarting.", pluginapi.KubeletSocket)
 				os.Exit(255)
 			}
 		case err := <-watcher.Errors:

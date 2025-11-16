@@ -30,7 +30,11 @@ func (sched *Schedueler) Start() error {
 	// Test Kubernetes APIServer
 	_ = k8s.GetKubeClient(utils.GetInitContext())
 
-	return r.Run(":8888")
+	go func() {
+		r.Run(":8888")
+	}()
+
+	return nil
 }
 
 func (sched *Schedueler) Filter(c *gin.Context) {
