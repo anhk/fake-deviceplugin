@@ -1,0 +1,44 @@
+package main
+
+import (
+	dp "fake-deviceplugin/app/deviceplugin"
+	"fake-deviceplugin/app/scheduler"
+	"fake-deviceplugin/pkg/log"
+	"fake-deviceplugin/pkg/utils"
+	"os"
+
+	"github.com/fsnotify/fsnotify"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+)
+
+func WaitKubeletRestart() {
+	ctx := utils.GetInitContext()
+	watcher, err := fsnotify.NewWatcher()
+	utils.PanicIfError(err)
+	defer watcher.Close()
+
+	log.Debug(ctx, "wait for notify kubelet.sock")
+
+	utils.PanicIfError(watcher.Add(pluginapi.KubeletSocket))
+	for {
+		select {
+		case event := <-watcher.Events:
+			if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Remove == fsnotify.Remove {
+				log.Infof(ctx, "inotify: %s removed, restarting.", pluginapi.KubeletSocket)
+				os.Exit(255)
+			}
+		case err := <-watcher.Errors:
+			log.Infof(ctx, "inotify error: %v", err)
+		}
+	}
+}
+
+func main() {
+	dp := dp.NewDevicePlugin("xxfe.com/fake-device", 16)
+	dp.Start()
+
+	sched := scheduler.NewScheduler()
+	sched.Start()
+
+	WaitKubeletRestart()
+}

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-deviceplugin-deployment-0000
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fake-deviceplugin-app-0000
+  template:
+    metadata:
+      labels:
+        app: fake-deviceplugin-app-0000
+    spec:
+      initContainers:
+        - name: init-container
+          image: ubuntu:22.04
+          command: ["echo", "Initializing Fake resources"]
+          resources:
+            limits:
+              xxfe.com/fake-device: 6
+      containers:
+        - name: gpu-container1
+          image: ubuntu:22.04
+          resources:
+            limits:
+              xxfe.com/fake-device: 2
+          #command: ["tail", "-f", "/dev/null"]
+          command: ["sleep", "99d"]
+
+        - name: gpu-container2
+          image: ubuntu:22.04
+          resources:
+            limits:
+              xxfe.com/fake-device: 2
+          #command: ["tail", "-f", "/dev/null"]
+          command: ["sleep", "99d"]
+      restartPolicy: Always
+
