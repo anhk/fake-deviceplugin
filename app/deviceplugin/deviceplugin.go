@@ -51,6 +51,7 @@ func (m *DevicePlugin) GetPreferredAllocation(ctx context.Context, _ *pluginapi.
 }
 
 func (m *DevicePlugin) Allocate(ctx context.Context, request *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+	ctx = utils.AddTraceId(ctx)
 	log.Debugf(ctx, "Allocate called with request: %s", utils.JsonString(request))
 	return &pluginapi.AllocateResponse{ContainerResponses: []*pluginapi.ContainerAllocateResponse{{}}}, nil
 }

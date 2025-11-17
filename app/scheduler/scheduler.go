@@ -23,9 +23,9 @@ func NewScheduler() *Schedueler {
 func (sched *Schedueler) Start() {
 	r := gin.Default()
 
-	r.POST("/filter", sched.Filter)
-	r.POST("/score", sched.Score)
-	r.POST("/bind", sched.Bind)
+	r.POST("/scheduler/predicates", sched.Filter)
+	r.POST("/scheduler/priorities", sched.Score)
+	r.POST("/scheduler/bind", sched.Bind)
 
 	// Test Kubernetes APIServer
 	_ = k8s.GetKubeClient(utils.GetInitContext())
@@ -38,9 +38,8 @@ func (sched *Schedueler) Filter(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	ctx := utils.NewContext()
-
-	log.Debug(ctx, "Scheduler Filter called, request: %s", utils.JsonString(request))
+	// ctx := utils.NewContext()
+	// log.Debug(ctx, "Scheduler Filter called, request: %s", utils.JsonString(request))
 
 	var result schedulerapi.ExtenderFilterResult
 	result.Nodes = request.Nodes
@@ -79,7 +78,7 @@ func (sched *Schedueler) Bind(c *gin.Context) {
 	}
 
 	ctx := utils.NewContext()
-	log.Debug(ctx, "Scheduler Bind called, request: %s", utils.JsonString(request))
+	log.Debugf(ctx, "Scheduler Bind called, request: %s", utils.JsonString(request))
 
 	binding := &v1.Binding{
 		ObjectMeta: metav1.ObjectMeta{Name: request.PodName, UID: request.PodUID},

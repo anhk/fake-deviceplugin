@@ -34,7 +34,7 @@ func WaitKubeletRestart() {
 }
 
 func main() {
-	dp := dp.NewDevicePlugin("xxfe.com/fake-device", 4)
+	dp := dp.NewDevicePlugin("xxfe.com/fake-device", 16)
 	dp.Start()
 
 	sched := scheduler.NewScheduler()

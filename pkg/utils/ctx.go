@@ -16,6 +16,13 @@ func NewContext() context.Context {
 	return context.WithValue(ctx, TraceKey, RandomString(8))
 }
 
+func AddTraceId(ctx context.Context) context.Context {
+	if ctx.Value(TraceKey) != nil {
+		return ctx
+	}
+	return WithTraceId(ctx, RandomString(8))
+}
+
 func WithTraceId(ctx context.Context, traceId string) context.Context {
 	return context.WithValue(ctx, TraceKey, traceId)
 }
