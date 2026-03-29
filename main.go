@@ -53,12 +53,18 @@ func main() {
 	// 支持设备插件注册到volcano的节点级别注解
 	ctx := utils.GetInitContext()
 	nodeName := volcano.ResolveNodeName()
-	gpus := volcano.BuildFakeGPUs(16, 10, 16380, "NVIDIA-NVIDIA GeForce RTX 4060 Ti")
+	gpus := volcano.BuildFakeGPUs(2, 10, 16380, "NVIDIA-NVIDIA GeForce RTX 4060 Ti")
 	StartVolcanoAnnotationSync(ctx, nodeName, gpus, 30*time.Second)
 
 	// 设备插件注册资源
-	dp := dp.NewDevicePlugin("xxfe.com/fake-device", 16)
-	dp.Start()
+	dpFake := dp.NewDevicePlugin("xxfe.com/fake-device", 16)
+	dpFake.Start()
+	dpNum := dp.NewDevicePlugin("volcano.sh/vgpu-number", 10*2)
+	dpNum.Start()
+	dpCores := dp.NewDevicePlugin("volcano.sh/vgpu-cores", 100*2)
+	dpCores.Start()
+	dpMemory := dp.NewDevicePlugin("volcano.sh/vgpu-memory", 16384*2)
+	dpMemory.Start()
 
 	// 调度扩展接口
 	sched := scheduler.NewScheduler()
